@@ -1,0 +1,188 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\begin{document}
+
+\title{Reading the Silicon: A Critical Visual Analysis of Hardware Fingerprints in Low-Light RAW Video}
+
+\author{\IEEEauthorblockN{Keshav}
+\IEEEauthorblockA{\textit{Netaji Subhas University of Technology} \\
+New Delhi, India \\
+keshav.poha@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+When we capture video in extreme low light, the resulting image is often a composite: half genuine optical signal, half structural illusion injected by the camera's own hardware. This underlying structure is known as Fixed-Pattern Noise (FPN). In this paper, we present a graphical, critical analysis of the stability and origins of these hardware fingerprints using the AIM 2025 Low-Light RAW Video dataset ($\sim$1 lux). By extracting and directly analyzing FPN heatmaps, spatial frequency charts, and hierarchical dendrograms across 14 commercial smartphone camera modules, we draw several empirical conclusions. First, FPN acts as an indelible, highly localized topographical mask that is demonstrably scene-independent. Second, sharp harmonic spikes in row-wise Power Spectral Density graphs firmly implicate periodic readout electronics as the dominant source of deterministic banding. Third, the magnitude of FPN varies by up to 20$\times$ between modules housed in the same handset. Finally, hierarchical clustering reveals that FPN structural similarity does not follow simple brand-level grouping; instead, cross-brand affinities suggest that module type and the underlying sensor die matter more than manufacturer identity. Recognizing and correcting these deterministic hardware signatures is a prerequisite to meaningful low-light image enhancement.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Fixed-Pattern Noise, Low-Light Video, RAW Sensor Data, Readout Architecture, Image Forensics
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+If you push a digital image sensor into pitch darkness at an aggressive framerate like 120 FPS, the resulting imagery is never a uniform black canvas. It is instead heavily marked by a persistent, uneven grid composed of localized dark current variations and readout biases. This deterministic layer of structural non-uniformity is universally known as Fixed-Pattern Noise (FPN). 
+
+Historically, FPN has been a cornerstone topic in digital image forensics. Seminal research by Lukas \textit{et al.} demonstrated that Photo Response Non-Uniformity (PRNU) acts as a unique, device-specific biometric, allowing investigators to link a photograph to the physical CMOS camera unit that captured it \cite{lukas2006digital, fridrich2009digital}. However, the contemporary drive toward extreme low-light videography has forced this phenomenon from a forensic curiosity into a computational photography roadblock. At an illumination of 1 lux---essentially a single candle in a dark room---the true optical signal is so profoundly starved that the sensor's hardware fingerprint, driven by column-parallel ADC variations and pixel readout circuitry \cite{el2005cmos, tian2001analysis}, often overrides the scene content. A denoising algorithm that assumes all noise is stochastic will trip over these rigid structures, leaving behind deterministic vertical or horizontal banding \cite{bouali2011detecting}.
+
+In this work, we ask a deceptively simple question: \textit{What is the graphical evidence actually telling us about these sensors?}
+
+Using the AIM 2025 Low-light RAW Video Denoising Challenge dataset \cite{yakovenko2025aim}, we extract FPN fingerprints from 14 smartphone camera modules across five physically distinct scenes and analyze the resulting heatmaps, power spectra, and dendrograms to draw grounded, empirical conclusions about how modern camera silicon behaves in the dark. The dataset offers a uniquely well-controlled environment: RAW, un-demosaicked, stop-motion video captured on a perfectly stable, motorised rail. By working with perfectly aligned frames, we average away stochastic noise to expose the deterministic hardware fingerprints beneath.
+
+\section{Related Work}
+
+Fixed-Pattern Noise arises from manufacturing variations in individual photodiodes and readout circuitry. Early characterization by Healey and Kondepudy \cite{healey1994radiometric} established radiometric calibration procedures for CCD sensors, while El Gamal and Eltoukhy \cite{el2005cmos} provided a comprehensive treatment of noise sources in CMOS active pixel sensors. Tian \textit{et al.} \cite{tian2001analysis} analyzed temporal noise contributions, distinguishing fixed offsets from frame-to-frame shot noise. More recently, Konnik and Welsh \cite{konnik2014high} offered a unified tutorial on photosensor noise modeling spanning both CCD and CMOS architectures.
+
+In digital forensics, Lukas \textit{et al.} \cite{lukas2006digital} showed that PRNU---a multiplicative component of sensor noise---serves as a reliable camera fingerprint. Goljan \textit{et al.} \cite{goljan2009large} extended this to large-scale camera identification, and Fridrich \cite{fridrich2009digital} surveyed the broader forensic applications. Korus \cite{korus2017digital} provides a modern survey of image integrity verification techniques that build on these sensor-level signatures.
+
+On the denoising side, physics-based noise models have gained prominence. Wei \textit{et al.} \cite{wei2020physics} proposed a noise formation model specifically for extreme low-light RAW data, explicitly decomposing noise into signal-dependent shot noise and signal-independent fixed pattern components. Chen \textit{et al.} \cite{chen2018learning} demonstrated end-to-end learning on RAW short-exposure imagery, while Hasinoff \textit{et al.} \cite{hasinoff2016burst} showed that burst averaging on mobile cameras can suppress temporal noise while preserving spatial detail. Stripe-specific correction methods, such as the column drift compensation by Liu \textit{et al.} \cite{liu2014fixed} and the destriping framework by Bouali and Ladjal \cite{bouali2011detecting}, address the banding artifacts that are a primary manifestation of FPN.
+
+Our work complements these approaches by providing an empirical, cross-sensor characterization of FPN in a controlled multi-scene environment, focusing on the structural diversity and sensor-specificity of these patterns rather than proposing a correction algorithm.
+
+\section{Methodology: Isolating the Silicon Blueprint}
+
+To characterize these hardware fingerprints, we must first isolate them from the overwhelming temporal noise inherent to 1-lux video. We employed a strict, zero-manipulation protocol on the raw sensor data: no Image Signal Processing (ISP), no demosaicking, and no artificial intelligence enhancement. All analyses were conducted directly on the native 10-bit and 12-bit RAW pixel values.
+
+Because the AIM 2025 dataset features perfectly aligned stop-motion captures, software-based image registration is entirely bypassed. We extracted the Fixed-Pattern Noise (FPN) by calculating the temporal mean across 10 contiguous noisy frames at the individual pixel level using Welford's online algorithm \cite{konnik2014high}, allowing stochastic shot noise to naturally cancel itself out. To remove the actual optical scene from this temporal mean, we subtracted the ground truth reference frame provided by the dataset---a high-fidelity composite produced by the dataset authors from extended captures at the identical rail position. The resulting residual matrix represents the pure, deterministic offset injected by the camera's hardware. All code and analysis scripts are publicly available.\footnote{\url{https://github.com/Keshav-poha/neural-archeology}}
+
+\section{Results and Graphical Analysis}
+
+We now present the graphical outputs of our fingerprint extraction pipeline and analyze them to understand the structure and origins of the hardware fingerprints.
+
+\subsection{The Indelible Topography of FPN}
+
+Figure~\ref{fig:fpn_grid} presents bipolar heatmaps of the isolated noise structures for several sensors across five completely distinct physical subjects (i.e., yarn, toys, hardware). We mapped negative biases to blue and positive biases to red. 
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=\textwidth]{figures/fpn_overview.png}}
+\caption{FPN residual heatmaps for the 14 camera modules across five scenes. Negative biases are mapped to blue, and positive biases to red. Note that the intense, localized geographical structures (e.g., the dark pooling bottom-right in the Pixel 5a UW) remain rigidly locked in identical coordinates regardless of what object is placed in front of the lens.}
+\label{fig:fpn_grid}
+\end{figure*}
+
+\textbf{Observation:} The FPN structure is demonstrably scene-independent. The Pixel 5a Ultrawide (Sensor~05) provides a striking example: a massive pool of deep blue negative bias localized in the bottom-right quadrant, paired with aggressive vertical red banding, repeats identically whether the camera is pointed at colored paper or an intricate pile of springs. What we are visualizing is not a failure of lens optics or an artifact of light reflection; it is a map of the sensor's dark current topography and readout offsets \cite{el2005cmos}. Because this map acts as a rigid, static overlay, it can in principle be subtracted prior to any learning-based enhancement \cite{wei2020physics}.
+
+\subsection{FPN Magnitude Across the Sensor Fleet}
+
+Before examining temporal behaviour, it is worth pausing on the sheer range of FPN severity across the 14 modules. Figure~\ref{fig:fpn_mag} plots the mean RMS FPN magnitude per sensor, averaged across the five scenes.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/fpn_summary.png}}
+\caption{Mean RMS Fixed-Pattern Noise per sensor (error bars = standard deviation across scenes). The S20 Ultrawide dominates at $\sim$0.035, while the S20 Wide sits near 0.002---a roughly 20$\times$ difference within the same handset.}
+\label{fig:fpn_mag}
+\end{figure}
+
+\textbf{Observation:} The S20 Ultrawide (S12) towers over every other module with an RMS FPN of 0.0345, while the S20 Wide (S11)---a sensor housed inside the exact same phone---registers at just 0.0016. This $\sim$22$\times$ disparity within a single handset demonstrates that FPN severity is a property of the individual silicon die and its readout circuitry, not the phone or its firmware. Other high-FPN modules include the POCO Front (0.0229) and the Pixel 7 Pro Ultrawide (0.0200), while the Fold4 Telephoto (0.0037) remains comparatively pristine. Table~\ref{tab:fpn_summary} provides the complete per-sensor breakdown.
+
+\begin{table}[t]
+\caption{Per-sensor FPN summary: mean RMS magnitude $\pm$ standard deviation across five scenes, sorted by descending magnitude.}
+\label{tab:fpn_summary}
+\centering
+\small
+\begin{tabular}{@{}llcc@{}}
+\toprule
+\textbf{\#} & \textbf{Module} & \textbf{RMS FPN} & \textbf{$\pm$ Std} \\
+\midrule
+12 & S20 UW        & 0.0345 & 0.0045 \\
+14 & POCO Front    & 0.0229 & 0.0029 \\
+ 8 & P7Pro UW      & 0.0200 & 0.0028 \\
+ 7 & P7Pro W       & 0.0196 & 0.0060 \\
+ 6 & P5a Front     & 0.0193 & 0.0028 \\
+ 9 & P7Pro T       & 0.0165 & 0.0025 \\
+ 1 & Fold4 W       & 0.0133 & 0.0040 \\
+ 5 & P5a UW        & 0.0109 & 0.0048 \\
+ 2 & Fold4 UW      & 0.0106 & 0.0030 \\
+10 & P7Pro Front   & 0.0088 & 0.0030 \\
+13 & POCO W        & 0.0082 & 0.0012 \\
+ 4 & P5a W         & 0.0040 & 0.0009 \\
+ 3 & Fold4 T       & 0.0037 & 0.0005 \\
+11 & S20 W         & 0.0016 & 0.0001 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Temporal Stability Under Duress}
+
+If these fingerprints are truly baked into the hardware, their statistical footprint should remain proportionally consistent even when the noise environment changes. We compared the mean pixel-wise temporal variance of the 10 standard noisy frames against a set of 20 extra-noisy validation frames.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/temporal_stability.png}}
+\caption{Mean pixel-wise temporal variance comparing standard noisy frames (blue) against extra-noisy frames (red) across the 14 sensors. Note that the noisy frames consistently show higher per-pixel variance than the extra-noisy set, reflecting the larger averaging pool (20 vs.\ 10 frames) in the latter.}
+\label{fig:temp}
+\end{figure}
+
+\textbf{Observation:} As seen in Figure~\ref{fig:temp}, the blue bars (10-frame noisy set) are consistently taller than the red bars (20-frame extra-noisy set) for nearly every sensor. This initially counter-intuitive result has a straightforward explanation: the extra-noisy set averages over 20 frames rather than 10, so its temporal variance estimate benefits from a larger sample, pulling the mean closer to the true expectation and yielding a lower measured variance. Crucially, the \textit{relative ranking} of sensors is preserved across both conditions---modules with high variance under the standard set remain the highest under the extra-noisy set. This proportional stability confirms that our FPN derivation captures an intrinsic baseline property of the sensor, not a fragile artefact of sample size.
+
+\subsection{The Rhythm of Readout Electronics}
+
+To understand the specific directionality of these artifacts, we generated Power Spectral Density (PSD) charts across the horizontal axes of the image matrices (Figure~\ref{fig:psd}). 
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/row_psd.png}}
+\caption{Row-direction Power Spectral Density (PSD) analysis. Note the sharp harmonic spikes, particularly from the S20-W (gray), Fold4-W (blue), and POCO-W (cyan) modules.}
+\label{fig:psd}
+\end{figure}
+
+\textbf{Observation:} In a purely random noise environment, spatial frequency charts should manifest as relatively smooth, featureless curves. Instead, the row-wise PSDs reveal sharp harmonic spikes at distinct normalized frequencies. The S20 Wide (gray) exhibits the most dramatic spikes at approximately 0.2 and 0.4 cycles/sample, with the Fold4 Wide (blue) showing a clear peak near 0.19 cycles/sample. Notably, the Pixel 5a Wide (green) dominates the low-frequency region with a PSD roughly an order of magnitude above most other sensors, indicating large-scale spatial non-uniformity rather than fine-grained periodic banding.
+
+These resonant peaks represent perfectly periodic stripes embedded across the image. The column-direction PSD (Figure~\ref{fig:col_psd}) reveals that while the row direction exhibits the most prominent spikes, the column direction is \textit{not} entirely featureless: the Fold4 Wide shows a spike near 0.08 cycles/sample, and the Pixel 5a Wide rises sharply at the Nyquist boundary. This indicates that banding is primarily row-aligned---consistent with row-sequential readout and shared column amplifiers---but a secondary column-wise component exists in some sensors.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/col_psd.png}}
+\caption{Column-direction PSD. While generally flatter than the row-direction, several sensors still exhibit localized spikes, indicating that readout artifacts are not exclusively row-aligned.}
+\label{fig:col_psd}
+\end{figure}
+
+\subsection{Manufacturing Pedigree and Cross-Brand Affinities}
+
+Because each sensor module inherently behaves like a unique fingerprint, we calculated a cross-sensor Pearson similarity matrix (Figure~\ref{fig:similarity}) and fed the distance metrics into a Ward linkage hierarchical clustering algorithm to generate a structural ``family tree'' of the hardware (Figure~\ref{fig:dendrogram}).
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/sensor_dendrogram.png}}
+\caption{Dendrogram clustering the 14 modules by FPN structural similarity (Ward linkage). The tree splits into two macro-branches (orange, green), each containing a mixture of brands and module types.}
+\label{fig:dendrogram}
+\end{figure}
+
+\textbf{Observation:} The dendrogram reveals a far more nuanced picture than simple brand-level grouping. The tree splits into two macro-branches at a Euclidean distance of approximately 10. The left branch (orange) groups the Pixel 7 Pro Ultrawide together with the S20 Ultrawide and the POCO Front---three modules from three different manufacturers. Beside them sit the Pixel 7 Pro Wide, Pixel 5a Front, and Pixel 7 Pro Telephoto. The right branch (green) is equally heterogeneous: it pairs the S20 Wide with the Fold4 Telephoto at a very low linkage distance ($\sim$0.4), and groups Pixel 5a Wide and Pixel 5a Ultrawide alongside the Pixel 7 Pro Front, Fold4 Ultrawide, Fold4 Wide, and POCO Wide.
+
+Two key patterns emerge. First, while several Pixel modules do cluster near each other (e.g., Pixel 7 Pro Wide and Pixel 5a Front on the left; Pixel 5a Wide and Pixel 5a UW on the right), the Pixel family is distributed across \textit{both} branches, not unified on one. This indicates that module type (wide vs.\ front vs.\ telephoto) and the underlying sensor die matter more than the phone brand alone. Second, strong cross-brand pairings appear: the S20 Wide and Fold4 Telephoto merge at a strikingly low linkage distance, and the Pixel 7 Pro UW clusters with the S20 UW.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{figures/sensor_similarity.png}}
+\caption{Cross-sensor Pearson similarity matrix (scene-averaged). The highest off-diagonal correlation ($r = 0.53$) is between the Fold4 Telephoto and S20 Ultrawide, two modules from different Samsung handsets.}
+\label{fig:similarity}
+\end{figure}
+
+The similarity matrix (Figure~\ref{fig:similarity}) provides complementary evidence. The highest off-diagonal Pearson correlation is $r = 0.53$ between the Fold4 Telephoto (S03) and the S20 Ultrawide (S12)---two modules housed in entirely different Samsung devices released years apart. Other elevated values include POCO Wide vs.\ Pixel 7 Pro Telephoto ($r = 0.47$) and Pixel 5a Front vs.\ Pixel 7 Pro Telephoto ($r = 0.44$). Note that the dendrogram (Ward linkage on Euclidean distance of downsampled FPN maps) and the similarity matrix (Pearson correlation on the same maps) measure structural affinity differently; consequently the closest pair by linkage distance (S20-W and Fold4-T) differs from the highest-correlation pair (Fold4-T and S20-UW). Both results consistently show that cross-brand structural similarities exist, which is compatible with the hypothesis that certain modules share upstream silicon from a common supplier---though our data alone cannot confirm this causal link.
+
+\section{Discussion and Limitations}
+
+Our graphical analysis yields several grounded observations. First, FPN topographies are unambiguously scene-independent: the same spatial structures reappear identically across five physically distinct scenes (Figure~\ref{fig:fpn_grid}). Second, the magnitude of FPN varies enormously across modules---by more than 20$\times$ within a single handset (Table~\ref{tab:fpn_summary})---demonstrating that noise severity is a property of the individual silicon die, not the host device. Third, hierarchical clustering and cross-sensor correlation reveal unexpected structural affinities across brands and device generations, suggesting shared upstream silicon components. Fourth, sharp harmonic spikes in the row-wise PSD consistently implicate periodic readout circuitry as the primary driver of deterministic banding \cite{liu2014fixed}, with a secondary column-wise component in some modules.
+
+These findings have direct implications for low-light denoising pipelines \cite{chen2018learning, hasinoff2016burst}. Because FPN is deterministic and scene-independent, it can in principle be subtracted as a pre-processing step, leaving the stochastic component for downstream algorithms. However, whether a single calibration frame suffices, or whether FPN drifts with temperature and aging, remains an open question for future work.
+
+Several limitations must be acknowledged. This study examines only 14 sensor modules from 5 smartphones, all operating at a single illumination level ($\sim$1 lux). Whether these fingerprints behave identically at higher illumination levels, different frame rates, or different ambient temperatures remains unverified. Additionally, the sensor numbering used throughout this work is \textit{inferred} from the column order of the challenge paper's performance table; the dataset does not publish an official numeric-to-model mapping. Finally, while a 10-frame temporal average substantially suppresses shot noise, it does not eliminate it entirely; residual stochastic contamination may slightly inflate the measured FPN magnitudes.
+
+\section{Conclusion}
+
+Fixed-Pattern Noise in extreme low-light RAW video is not a random nuisance---it is a stubborn, spatially structured, and highly sensor-specific architectural signature. The evidence presented here demonstrates that these hardware fingerprints persist rigidly across varying scene geometries, maintain proportional stability under different noise regimes, and reveal unexpected structural affinities across manufacturers through hierarchical clustering.
+
+For computational photography, this carries a clear implication: any denoising pipeline operating on 1-lux RAW video should first identify and subtract this deterministic hardware bias before attempting to recover the genuine optical signal beneath. Whether scene-independent correction functions can be derived entirely without ISP operations---and whether such corrections generalize across illumination levels---remains an important direction for future work.
+
+\section*{Acknowledgment}
+
+We wish to acknowledge the structural foundation provided by the AIM 2025 extreme low-light dataset challenge.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

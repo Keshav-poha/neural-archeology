@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software or reference this research, please cite it as below."
+type: software
+title: "Neural Archaeology: Sensor-Specific Bias in RAW Low-Light Data"
+authors:
+  - given-names: Keshav
+    affiliation: "Netaji Subhas University of Technology"
+    email: keshav.poha@gmail.com
+repository-code: "https://github.com/Keshav-poha/neural-archeology"
+license: MIT
+keywords:
+  - fixed-pattern-noise
+  - low-light-imaging
+  - RAW-sensor-data
+  - image-forensics
+  - CMOS-sensors
+preferred-citation:
+  type: article
+  title: "Reading the Silicon: A Critical Visual Analysis of Hardware Fingerprints in Low-Light RAW Video"
+  authors:
+    - given-names: Keshav
+      affiliation: "Netaji Subhas University of Technology"
+      email: keshav.poha@gmail.com
+  year: 2025

@@ -1,0 +1,367 @@
+Neural Archaeology: Digging for Hidden Fingerprints in Smartphone Camera Sensors
+==================================================================================
+A plain-English walkthrough of the research
+
+---
+
+INTRODUCTION: WHAT IS THIS ALL ABOUT?
+--------------------------------------
+
+Every camera sensor has a personality. Even before you aim it at anything, even in
+total darkness, it produces a faint, repeating pattern of light and dark pixels that
+has nothing to do with the scene in front of it. This pattern is baked into the
+hardware. It is called Fixed-Pattern Noise, or FPN.
+
+The question this research asks is: can we reliably detect and measure these
+sensor "fingerprints" from real-world footage? And more importantly, are these
+fingerprints consistent across different scenes, or do they change depending on
+what you are filming?
+
+To answer this, we used the AIM 2025 Low-Light RAW Video Denoising dataset. It
+was captured by a group of researchers at Lomonosov Moscow State University who
+mounted 14 different smartphone cameras on a motorised rail inside a dark photo
+box, lit only by a carefully controlled LED lamp set to roughly 1 lux — about the
+brightness of a single candle from a metre away. They filmed five different
+tabletop scenes (coloured objects, hardware parts, springs, toys, yarn) under
+these extreme conditions.
+
+The key insight behind the dataset: because the cameras were mounted on a rail
+and shot in stop-motion (move, shoot, move, shoot), every frame is precisely
+aligned. There is no camera shake to confuse the analysis. That alignment is what
+makes it possible to separate true scene signal from sensor artefacts.
+
+Each sensor produced its data as a .npz file — a compressed dictionary containing
+the 10 main noisy frames, 20 extra-noisy frames of the final position, and a
+ground-truth frame built by averaging 200 of those extra-noisy frames to wash out
+random noise and leave only the true scene signal.
+
+Our job: take that raw data and systematically excavate the sensor fingerprints
+buried inside it.
+
+
+THE CAMERAS
+-----------
+
+Fourteen camera modules were used, spread across five smartphones:
+
+  Samsung Galaxy Z Fold4   — wide, ultrawide, and telephoto cameras
+  Google Pixel 5a          — wide, ultrawide, and front cameras
+  Google Pixel 7 Pro       — wide, ultrawide, telephoto, and front cameras
+  Samsung Galaxy S20       — wide and ultrawide cameras
+  POCO X3 Pro              — wide and front cameras
+
+They cover a wide range of sensor generations, sizes, and optical designs,
+which is exactly what makes this dataset interesting. If you can find consistent
+fingerprints even across sensors this different, you have learned something real.
+
+
+THE DATA FORMAT
+---------------
+
+Each .npz file contains floating-point 2D arrays (one array per frame) where 0.0
+means "no light detected" and 1.0 means "sensor fully saturated". The images are
+still in RAW format — meaning they have not been processed by any camera software.
+They still look like a chequerboard of red, green, and blue pixels because the
+Bayer filter (the colour filter array sitting on top of the sensor) has not been
+removed. We deliberately left the data in this form to avoid any processing that
+might wash away or alter the fingerprints we are looking for.
+
+
+---
+
+STEP 1: GATHERING THE NUMBERS (compute_statistics.py)
+------------------------------------------------------
+
+Before we can look for a fingerprint, we need to measure the data carefully.
+
+For every sensor in every scene, we load all 10 noisy frames and compute
+statistics at the level of individual pixels — not the whole image at once.
+That means for each pixel, we ask: across the 10 frames, what is the average
+brightness? How much does it bounce around (variance)? How spread out are the
+values (standard deviation)?
+
+We use Welford's online algorithm to do this. The reason is memory: a full-size
+RAW image from these cameras is about 40 megapixels. Loading all 10 frames at
+the same time into RAM and then computing statistics would require several
+gigabytes. Welford's algorithm lets you update the mean and variance one frame at
+a time, throwing away the previous frame once it is processed, so the memory
+footprint stays tiny.
+
+We do the same calculation on the 20 extra-noisy frames separately. These extra
+frames were captured at the same position as the final frame but with the sensor
+pushed even harder into noise. They tell us how the sensor behaves at extreme
+noise levels, which is useful for checking whether our fingerprint measurements
+are stable across different noise conditions.
+
+The output for each sensor/scene pair is a small .npz file containing:
+  - The pixel-by-pixel temporal mean (what the sensor "expects" to see on average)
+  - The pixel-by-pixel variance and standard deviation
+  - A copy of the ground-truth frame
+  - Per-frame global brightness and spread values
+  - The same stats computed from the extra-noisy frames
+
+Think of this step as taking a careful measurement before doing any real analysis.
+We are not interpreting anything yet — just counting.
+
+
+---
+
+STEP 2: EXTRACTING THE FINGERPRINT (extract_bias.py)
+-----------------------------------------------------
+
+Now we use those statistics to extract what we actually care about.
+
+The BIAS MAP for a sensor/scene pair is simply the temporal mean image computed
+in Step 1. When you average 10 noisy frames together, the random noise partially
+cancels out (random fluctuations above and below zero average toward zero), but
+the fixed pattern does not cancel — it stays. The result is an image that mostly
+shows the sensor's persistent, scene-independent noise.
+
+The FPN RESIDUAL goes one step further. We subtract the ground-truth frame from
+the bias map:
+
+    FPN residual = bias map − ground truth
+
+The ground truth tells us what the true scene looks like (with random noise
+averaged away). Whatever is left after subtraction is the systematic offset that
+the sensor adds on top of the real signal. Non-zero values here mean the sensor
+is adding its own signature to every pixel.
+
+We also compute two simplified versions:
+
+  Row FPN: average the entire bias map across columns, giving one value per row.
+  This captures horizontal banding — stripes that run left to right across the
+  whole image, caused by the way rows of pixels share readout circuitry.
+
+  Column FPN: the same idea but averaged across rows, capturing vertical banding.
+
+SCENE INDEPENDENCE TEST
+
+Here is the critical question: is this fingerprint actually a property of the
+sensor, or does it change scene to scene?
+
+To test this, we take each sensor's bias map from all 5 scenes and compute
+Pearson correlation (r) between every possible pair of scenes. The Pearson r
+measures how similar two patterns are, from -1 (opposite) to 0 (unrelated) to
++1 (identical).
+
+If a sensor's fingerprint is a true sensor property, you would expect the bias
+maps from different scenes to look very similar — their r values should be close
+to 1. If the fingerprint is mostly scene content bleeding through (because 10
+frames is not enough to wash away all noise), r would be lower.
+
+We save a 5×5 correlation matrix per sensor and compute the mean off-diagonal
+value as a single summary number.
+
+
+---
+
+STEP 3: COMPARING SENSORS AND FINDING STRUCTURE (analyse_bias.py)
+------------------------------------------------------------------
+
+With 14 sensors each having their own fingerprint, the next question is: how
+similar are the sensors to each other?
+
+PAIRWISE SIMILARITY
+
+We compute Pearson r between every possible pair of sensor bias maps. Because
+sensors have different native resolutions (the Galaxy Z Fold4 Telephoto shoots at
+3648×2736, the Pixel 7 Pro at 4080×3072, and so on), we cannot directly compare
+raw images — they are different sizes. So we first scale every bias map down by a
+factor of 20 (turning a 3648×2736 image into a ~182×137 thumbnail) and then crop
+to the smallest common size. This shrinking also speeds up computation enormously.
+
+The result is a 14×14 similarity matrix: each cell tells you how similar sensor A's
+fingerprint is to sensor B's, averaged across all scenes.
+
+HIERARCHICAL CLUSTERING
+
+A 14×14 table is hard to read at a glance. Clustering organises the sensors into
+a tree (called a dendrogram) based on how similar their fingerprints are.
+
+We use Ward linkage, which builds the tree by repeatedly merging the two groups
+whose merger would increase the total within-group spread the least. Sensors with
+very similar fingerprints end up on the same branch, sensors with very different
+fingerprints end up on distant branches.
+
+This tells us, for example, whether all sensors from the same phone tend to cluster
+together (suggesting the fingerprint is mainly driven by the readout chip shared
+across modules on one phone) or whether the clustering follows some other pattern
+(like sensor physical size, or manufacturer).
+
+POWER SPECTRAL DENSITY (PSD)
+
+A fingerprint might contain periodic structure — regular stripes or patterns that
+repeat at a fixed frequency. Power Spectral Density analysis reveals this.
+
+We apply a standard Fourier transform to each row of the bias map and measure how
+much energy is present at each spatial frequency. We do the same along each column.
+Then we average across all rows (and all columns) to get a smooth summary curve.
+
+A spike in the PSD curve means there is a regular repeating pattern at that spatial
+frequency. A flat curve means the noise is more random. Comparing PSD curves across
+sensors can reveal whether different sensors share common periodic artefacts (which
+might come from the readout electronics) or whether their noise structures are
+independent.
+
+FPN MAGNITUDE SUMMARY
+
+Finally, we compute a single number per sensor: the root-mean-square (RMS) of its
+FPN residual. RMS is like an "average strength" of the fingerprint — a higher RMS
+means a stronger, more visible fixed pattern.
+
+We compute this per sensor per scene, then aggregate across scenes to get:
+  - Mean RMS FPN (how strong the fingerprint is overall)
+  - Variance of RMS FPN across scenes (how much the strength varies by scene)
+
+Low variance here supports our hypothesis that the fingerprint is a stable sensor
+property, not something that varies with scene content.
+
+
+---
+
+STEP 4: TURNING RESULTS INTO PICTURES (visualise.py)
+-----------------------------------------------------
+
+Numbers in .npz files are hard to communicate. This step converts everything into
+images and charts.
+
+BIAS MAP HEATMAPS
+
+We render each bias map as a colour image where blue means below-average and red
+means above-average, clipped to ±2 standard deviations. This makes subtle
+patterns visible to the human eye. Looking at these side by side across five scenes
+for the same sensor gives an immediate visual sense of whether the fingerprint is
+consistent.
+
+SCENE INDEPENDENCE GRID
+
+A grid of coloured squares showing the 5×5 Pearson r matrix for each sensor.
+Deep green means r close to 1 (consistent fingerprint across scenes), red means
+low correlation.
+
+SENSOR SIMILARITY HEATMAP
+
+A 14×14 grid showing how similar every pair of sensors is, on the same green-red
+colour scale. Sensors that are highly similar to each other will show bright green
+cells; sensors that are uncorrelated will be closer to red.
+
+DENDROGRAM
+
+A tree diagram that visualises the hierarchical clustering result. Sensors that
+merged early (at the bottom of the tree) are very similar; sensors with long
+branches before they merge are different from everything else.
+
+PSD PLOTS
+
+Two line charts — one for the row direction, one for the column direction — with
+one line per sensor. If several sensors share a frequency spike, it stands out
+as multiple lines peaking at the same point.
+
+FPN SUMMARY BAR CHART
+
+A simple bar chart showing mean RMS FPN per sensor, labelled with the camera model.
+At a glance you can see which sensors have stronger or weaker fixed-pattern noise.
+
+TEMPORAL STABILITY
+
+A comparison between the variance measured from the 10 normal noisy frames and the
+variance from the 20 extra-noisy frames. This checks whether our statistics are
+consistent between the two noise regimes, which would support the idea that we are
+measuring something real about the sensor rather than a chance artefact of the
+particular noise realisation we chose.
+
+
+---
+
+THE ANALYSIS RULES WE SET FOR OURSELVES
+-----------------------------------------
+
+Research like this can easily go off the rails if you start applying processing
+steps that change what you are measuring. We wrote down a set of explicit
+restrictions at the start:
+
+  - No denoising before measuring anything
+  - No ISP operations (white balance, sharpening, demosaicking, tone curves)
+  - No normalising or rescaling pixel values for analysis
+  - No converting to RGB colour space
+  - No training machine learning models
+  - No inferring scene content
+  - No speculating about physical causes without supporting evidence
+
+Everything is measured on the raw, unmodified sensor values exactly as they came
+out of the phone. This keeps the analysis clean and reproducible, and it means
+the fingerprints we find are real hardware characteristics — not artefacts of
+our processing choices.
+
+
+---
+
+PUTTING IT ALL TOGETHER
+------------------------
+
+The pipeline runs in four sequential steps:
+
+  Step 1 → compute_statistics.py    (measure the data)
+  Step 2 → extract_bias.py          (extract the fingerprints)
+  Step 3 → analyse_bias.py          (compare sensors, cluster, run PSD)
+  Step 4 → visualise.py             (turn everything into figures)
+
+Each step reads the output of the previous one, so you can re-run any single
+step without redoing the whole pipeline. All intermediate data is saved as
+compressed .npz files in the results/ directory.
+
+There is also a utility script (decode_and_save.py) that converts the raw .npz
+frames into ordinary PNG images for quick visual inspection. It is not part of
+the analysis pipeline — it is just for looking at the data.
+
+
+---
+
+WHY THIS MATTERS
+-----------------
+
+Understanding sensor fingerprints has several practical uses:
+
+1. CAMERA CALIBRATION — Knowing a sensor's fixed-pattern noise lets you subtract
+   it from future images, making the images cleaner without any deep learning.
+
+2. FORENSICS — Sensor fingerprints survive JPEG compression, cropping, and even
+   some editing. Researchers use them to determine which camera captured a given
+   image, which has legal applications.
+
+3. DENOISING RESEARCH — The AIM 2025 challenge was about building denoising
+   algorithms for low-light RAW video. Understanding what part of the noise is
+   random versus fixed is directly useful for designing better denoisers. A
+   perfect denoiser would separately handle random shot noise (which varies
+   frame to frame) and fixed-pattern noise (which stays constant).
+
+4. SENSOR ARCHAEOLOGY — Sometimes old RAW files surface without metadata. By
+   comparing the fingerprint of an unknown image against a database of known
+   sensor fingerprints, you can determine which physical camera captured it —
+   hence the name of this project: Neural Archaeology.
+
+
+---
+
+WHAT THIS RESEARCH DOES NOT DO (YET)
+--------------------------------------
+
+  - It does not try to remove the fingerprints from images
+  - It does not train any machine learning models
+  - It does not build a fingerprint database for matching
+  - It does not analyse the colour information in the Bayer pattern separately
+
+These are natural next steps, but they require moving beyond the strict no-ISP,
+no-learning protocol that governs the current study.
+
+
+---
+
+REFERENCE
+
+Dataset and challenge:
+Yakovenko, A. et al.
+"AIM 2025 Low-light RAW Video Denoising Challenge: Dataset, Methods and Results."
+ICCV Workshops 2025. arXiv:2508.16830
+https://www.codabench.org/competitions/8729/
