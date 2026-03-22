@@ -108,7 +108,7 @@ This section presents the graphical outputs of the fingerprint extraction pipeli
 
 Figure~\ref{fig:fpn_grid} presents bipolar heatmaps of the isolated FPN residuals for the 14 camera modules across all five scenes. Negative biases are mapped to blue and positive biases to red.
 
-\begin{figure*}[t]
+\begin{figure*}[htb!]
 \centerline{\includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{figures/fpn_overview.png}}
 \caption{FPN residual heatmaps for the 14 camera modules across five scenes. Negative biases are mapped to blue, positive biases to red. The spatial structures---such as the deep negative pooling in the bottom-right quadrant of the Pixel 5a Ultrawide---remain rigidly locked at identical coordinates regardless of scene content.}
 \label{fig:fpn_grid}
@@ -120,13 +120,13 @@ The FPN topography is demonstrably scene-independent. The Pixel 5a Ultrawide (Se
 
 Figure~\ref{fig:fpn_mag} quantifies the mean RMS FPN magnitude per sensor, averaged across the five scenes. The complete per-sensor breakdown is provided in Table~\ref{tab:fpn_summary}.
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/fpn_summary.png}}
 \caption{Mean RMS Fixed-Pattern Noise per sensor (error bars indicate standard deviation across scenes). The S20 Ultrawide exhibits the highest FPN at approximately 0.035, while the S20 Wide registers near 0.002---a roughly $22\times$ disparity within the same handset.}
 \label{fig:fpn_mag}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[htb!]
 \caption{Per-sensor FPN summary: mean RMS magnitude $\pm$ standard deviation across five scenes, sorted by descending magnitude.}
 \label{tab:fpn_summary}
 \centering
@@ -161,7 +161,7 @@ A further pattern emerges when FPN magnitudes are aggregated by module type. Acr
 
 To evaluate whether the extracted fingerprints genuinely reflect intrinsic hardware properties, the mean pixel-wise temporal variance of the standard 10-frame noisy set was compared against a 20-frame extra-noisy validation set (Figure~\ref{fig:temp}).
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/temporal_stability.png}}
 \caption{Mean pixel-wise temporal variance: standard noisy frames (blue) versus extra-noisy frames (red) across the 14 sensors. The consistently higher variance in the standard set reflects the smaller averaging pool (10 vs.\ 20 frames).}
 \label{fig:temp}
@@ -173,7 +173,7 @@ As shown in Figure~\ref{fig:temp}, the blue bars (10-frame noisy set) are consis
 
 To elucidate the directional structure of the deterministic artifacts, Power Spectral Density (PSD) profiles were computed along the horizontal (row) and vertical (column) axes of the FPN residual matrices (Figures~\ref{fig:psd} and~\ref{fig:col_psd}).
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/row_psd.png}}
 \caption{Row-direction Power Spectral Density (PSD) of the FPN residuals. Sharp harmonic spikes are visible at discrete normalised frequencies, particularly from the S20 Wide, Fold4 Wide, and POCO Wide modules.}
 \label{fig:psd}
@@ -181,7 +181,7 @@ To elucidate the directional structure of the deterministic artifacts, Power Spe
 
 In a purely random noise field, the spatial frequency spectrum would present as a smooth, featureless curve. Instead, the row-wise PSDs reveal sharp harmonic spikes at distinct normalised frequencies. The S20 Wide exhibits the most prominent spikes at approximately 0.2 and 0.4 cycles/sample, while the Fold4 Wide shows a clear peak near 0.19 cycles/sample. The Pixel 5a Wide dominates the low-frequency region with a PSD magnitude roughly an order of magnitude above most other sensors, indicating large-scale spatial non-uniformity rather than fine-grained periodic banding. These resonant peaks correspond to perfectly periodic stripes embedded in the sensor output, consistent with systematic variations in column-parallel ADC behaviour and shared readout amplifiers \cite{el2005cmos, liu2014fixed}.
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/col_psd.png}}
 \caption{Column-direction PSD of the FPN residuals. While generally exhibiting a flatter profile than the row direction, several sensors display localised spikes, indicating that readout artifacts are not exclusively row-aligned.}
 \label{fig:col_psd}
@@ -193,7 +193,7 @@ The column-direction PSD (Figure~\ref{fig:col_psd}) reveals that while the row d
 
 To investigate manufacturing-level relationships among the 14 modules, a cross-sensor Pearson correlation matrix was computed from scene-averaged FPN maps (Figure~\ref{fig:similarity}), and Ward-linkage hierarchical clustering was applied to the corresponding Euclidean distance matrix (Figure~\ref{fig:dendrogram}).
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/sensor_dendrogram.png}}
 \caption{Dendrogram clustering the 14 modules by FPN structural similarity (Ward linkage). The dendrogram splits into two macro-branches (orange, green) at a Euclidean distance of approximately 10, each containing a heterogeneous mixture of brands and module types.}
 \label{fig:dendrogram}
@@ -201,7 +201,7 @@ To investigate manufacturing-level relationships among the 14 modules, a cross-s
 
 The dendrogram (Figure~\ref{fig:dendrogram}) reveals a far more nuanced structure than simple brand-level grouping would suggest. The tree splits into two macro-branches at a Euclidean distance of approximately 10. The left branch groups the Pixel 7 Pro Ultrawide with the S20 Ultrawide and the POCO Front---three modules from three distinct manufacturers. The right branch is equally heterogeneous, pairing the S20 Wide with the Fold4 Telephoto at a strikingly low linkage distance ($\sim$0.4) and grouping Pixel 5a modules alongside the Fold4 Ultrawide, Pixel 7 Pro Front, Fold4 Wide, and POCO Wide.
 
-\begin{figure}[t]
+\begin{figure}[htb!]
 \centerline{\includegraphics[width=\columnwidth]{figures/sensor_similarity.png}}
 \caption{Cross-sensor Pearson similarity matrix (scene-averaged). The highest off-diagonal correlation ($r = 0.53$) occurs between the Fold4 Telephoto and S20 Ultrawide, two modules from different Samsung handsets released years apart.}
 \label{fig:similarity}
