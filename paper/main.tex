@@ -9,10 +9,13 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc}
 
 \begin{document}
 
-\title{Reading the Silicon: A Critical Visual Analysis of Hardware Fingerprints in Low-Light RAW Video}
+\title{A Critical Visual Analysis of Hardware Fingerprints in Low-Light RAW Video}
 
 \author{\IEEEauthorblockN{Keshav}
 \IEEEauthorblockA{\textit{Netaji Subhas University of Technology} \\
@@ -32,39 +35,15 @@ Fixed-Pattern Noise, Low-Light Video, RAW Sensor Data, Readout Architecture, Ima
 
 \section{Introduction}
 
-Extreme low-light videography places extraordinary demands on CMOS image sensors. At illumination levels approaching 1 lux, the incident photon flux is so severely attenuated that the genuine optical signal is frequently overwhelmed by noise contributions intrinsic to the sensor hardware \cite{el2005cmos, janesick2001scientific}. Among these, Fixed-Pattern Noise (FPN)---comprising spatially structured dark current non-uniformities and readout offset variations---constitutes a deterministic bias layer that persists identically across successive frames \cite{tian2001analysis, healey1994radiometric}. Unlike stochastic shot noise, which diminishes under temporal averaging, FPN remains as a rigid structural imprint of the silicon die and its associated readout circuitry.
+The domain of extreme low-light videography places extraordinary demands on modern CMOS image sensors. At illumination levels approaching 1 lux, the incident photon flux is so severely attenuated that the genuine optical signal is frequently overwhelmed by noise contributions intrinsic to the sensor hardware architectures \cite{el2005cmos, janesick2001scientific}. Among these contributions, Fixed-Pattern Noise (FPN)---which comprises spatially structured dark current non-uniformities and column-parallel readout offset variations---constitutes a deterministic bias layer that persists identically across successive frames \cite{tian2001analysis, healey1994radiometric}. Unlike stochastic shot noise, which accurately models particle arrival statistics and diminishes under temporal averaging, FPN acts as a rigid, scene-independent structural imprint of the physical silicon die and its associated amplification circuitry.
 
-\subsection{Limitations in the Existing Literature}
+Historically, classical research has treated sensor noise characterisation through rigorous laboratory calibration or single-sensor forensic analysis. Seminal works by Lukas \textit{et al.} \cite{lukas2006digital} and subsequent large-scale forensic studies \cite{goljan2009large, li2010source, chen2008determining} convincingly demonstrated that noise residuals, such as Photo Response Non-Uniformity (PRNU), serve as reliable camera fingerprints. However, these classical studies predominantly addressed the uniqueness of individual sensors for digital forensics rather than systematically comparing the structural relationships and deterministic artifacts between sensors from varying module types and contemporary manufacturers. In contrast, modern state-of-the-art (SOTA) research addresses poor illumination through deep-learning-based computational photography pipelines operating directly on RAW data, such as the works by Chen \textit{et al.} \cite{chen2018learning}, CycleISP \cite{zamir2020cycleisp}, and Unprocessing networks \cite{brooks2019unprocessing}. 
 
-Despite extensive prior investigation, several important gaps persist in the current understanding of FPN behaviour under extreme low-light conditions:
+Despite these advancements, significant limitations persist in the literature bridging physical hardware properties to modern enhancement models. Firstly, many contemporary learning-based pipelines implicitly treat sensor noise as predominantly stochastic or synthesize it using simplified Gaussian-Poisson distributions \cite{zhang2021rethinking}, largely ignoring the profound deterministic FPN layer embedded across diverse, modern smartphone sensor populations. Secondly, existing FPN characterisation efforts \cite{konnik2014high, el2005cmos} typically investigate individual sensors or specialized scientific families in isolation. There is a marked absence of cross-sensor comparative studies evaluating FPN magnitude, spectral properties, and spatial architectures across multiple commercial camera modules operating under identically controlled 1-lux conditions. Finally, although modern devices incorporate vast multi-camera arrays (wide, ultrawide, telephoto), the extent to which physical FPN properties vary across co-located modules within a single chassis has not been systematically quantified, despite its direct relevance to burst-averaging and multi-view computational pipelines \cite{hasinoff2016burst}.
 
-\begin{enumerate}[label=(\roman*)]
-    \item \textbf{Single-sensor forensic focus.} The seminal work of Lukas \textit{et al.} \cite{lukas2006digital} and subsequent large-scale studies \cite{goljan2009large, li2010source, chen2008determining} have convincingly demonstrated that Photo Response Non-Uniformity (PRNU) serves as a reliable camera fingerprint for forensic identification. However, these studies predominantly address the uniqueness of individual sensors rather than the \textit{structural relationships} between sensors from different manufacturers or module types.
+This work systematically addresses these limitations through a rigorous empirical investigation of FPN architectures across 14 smartphone camera modules. Our research caters to the gaps in SOTA models by providing a unified quantitative characterisation of FPN magnitude across a diverse hardware fleet, revealing severe intra-device disparities of up to $22\times$ and establishing conclusively that noise severity is a property of the individual silicon layout rather than the host device firmware. Furthermore, we provide a mathematical spectral analysis of the deterministic bands via row- and column-direction Power Spectral Density profiles, identifying sharp harmonic spikes that implicate specific periodic readout electronics. Crucially, the isolated FPN topographies are demonstrated to be entirely scene-independent structures, and our subsequent hierarchical clustering analysis reveals that FPN similarity does not follow brand-level grouping; instead, cross-brand affinities strongly suggest shared upstream silicon components across manufacturers.
 
-    \item \textbf{Assumption of stochastic noise dominance.} Many state-of-the-art denoising pipelines---including learning-based approaches operating directly on RAW data \cite{chen2018learning, brooks2019unprocessing, wang2020practical}---implicitly treat sensor noise as predominantly stochastic. Physics-based noise models \cite{wei2020physics, foi2008practical, zhang2021rethinking} have begun to decompose noise into signal-dependent and signal-independent components, yet empirical characterisation of the deterministic FPN layer across diverse sensor populations remains limited.
-
-    \item \textbf{Absence of cross-sensor comparative studies.} Existing FPN characterisation efforts \cite{konnik2014high, el2005cmos} typically examine individual sensors or sensor families in isolation. No prior study, to our knowledge, provides a systematic empirical comparison of FPN magnitude, spatial structure, and spectral characteristics across multiple camera modules from different manufacturers operating under identical controlled conditions.
-
-    \item \textbf{Limited attention to intra-device variance.} Modern smartphones incorporate multiple camera modules (wide, ultrawide, telephoto, front-facing) within a single chassis. The extent to which FPN properties vary across co-located modules has not been systematically quantified, despite its direct relevance to multi-camera computational photography pipelines \cite{hasinoff2016burst}.
-\end{enumerate}
-
-\subsection{Contributions}
-
-This work addresses the aforementioned limitations through a systematic, empirical investigation of FPN across 14 smartphone camera modules. The principal contributions are as follows:
-
-\begin{enumerate}[label=(\arabic*)]
-    \item A rigorous demonstration that FPN topographies are entirely scene-independent, persisting as identical spatial structures across five physically distinct scenes captured under controlled conditions.
-
-    \item A quantitative characterisation of FPN magnitude across the full sensor fleet, revealing intra-device disparities of up to $22\times$ and establishing that noise severity is a property of the individual silicon die rather than the host device.
-
-    \item A spectral analysis of FPN via row- and column-direction Power Spectral Density profiles, identifying sharp harmonic spikes that implicate periodic readout electronics as the primary source of deterministic banding artifacts.
-
-    \item A hierarchical clustering analysis demonstrating that FPN structural similarity does not follow brand-level grouping, with cross-brand affinities suggesting shared upstream silicon components across manufacturers.
-\end{enumerate}
-
-\subsection{Paper Organisation}
-
-The remainder of this paper is organised as follows. Section~II reviews related work on FPN characterisation, sensor forensics, and low-light denoising. Section~III describes the methodology employed to isolate deterministic hardware fingerprints from RAW sensor data. Section~IV presents the results and graphical analysis, encompassing FPN heatmaps, magnitude comparisons, temporal stability, spectral analysis, and cross-sensor clustering. Section~V discusses the implications, limitations, and directions for future work, and Section~VI concludes the paper.
+The remainder of this paper is organised as follows. Section~II reviews related work spanning classical noise characterisation and modern deep low-light denoising. Section~III formulates the proposed methodology, detailing problem formulation, experimental setup, and the algorithmic pipeline used to isolate deterministic hardware fingerprints. Section~IV presents the evaluation metrics and consequent graphical results, encompassing magnitude comparisons, spectral analysis, and cross-sensor clustering. Section~V discusses the physical implications and limitations of the study, and Section~VI concludes the paper.
 
 \section{Related Work}
 
@@ -84,19 +63,101 @@ On the algorithmic side, Chen \textit{et al.} \cite{chen2018learning} demonstrat
 
 Our work complements these approaches by providing an empirical, cross-sensor characterisation of FPN in a controlled multi-scene environment, focusing on the structural diversity and sensor-specificity of these patterns rather than proposing a correction algorithm.
 
-\section{Methodology}
+\section{Proposed Methodology}
 
-The objective of this study is to isolate and characterise the deterministic hardware fingerprints embedded in low-light RAW video. To achieve this, a strict analytical protocol was employed, operating exclusively on unprocessed sensor data without any Image Signal Processing (ISP), demosaicking, or machine learning enhancement. All analyses were conducted directly on native 10-bit and 12-bit RAW pixel values. The pipeline is summarised as follows.
+The fundamental objective of the proposed methodology is to mathematically isolate, decouple, and characterise the deterministic hardware fingerprints embedded within extremely low-light RAW video streams. To achieve rigorous reproducibility, a strict analytical protocol is employed operating exclusively on linear, unprocessed sensor data prior to any Image Signal Processing (ISP) or demosaicking operations.
 
-\begin{enumerate}[label=\textbf{Step \arabic*:}, leftmargin=*, align=left]
-    \item \textbf{Dataset and Frame Extraction.} The AIM 2025 Low-Light RAW Video Denoising Challenge dataset \cite{yakovenko2025aim} provides stop-motion RAW video captured at approximately 1 lux across 14 smartphone camera modules and five physically distinct scenes (coloured paper, hardware components, springs, toys, and yarn). All sequences were recorded on a motorised rail, ensuring perfect frame alignment and eliminating the need for software-based image registration.
+\subsection{Problem Formulation}
+Let $I_{t}(x,y)$ represent the raw pixel intensity at spatial coordinate $(x,y)$ for frame $t$. The total observed signal can be modelled as a linear combination of the structural scene radiance $S(x,y)$, the signal-dependent stochastic shot noise $\eta_{s}(t)$, the signal-independent temporal read noise $\eta_{r}(t)$, and the deterministic Fixed-Pattern Noise intrinsic to the hardware $F(x,y)$:
+\begin{equation}
+    I_{t}(x,y) = S(x,y) + F(x,y) + \eta_{s}(t) + \eta_{r}(t)
+\end{equation}
+Because stochastic components $\eta_{s}$ and $\eta_{r}$ possess a zero-mean Gaussian-Poisson expectation over time, temporal averaging precisely isolates the rigid bias layer $F(x,y)$ from the underlying static radiance $S(x,y)$.
 
-    \item \textbf{Temporal Averaging.} For each sensor--scene pair, 10 contiguous noisy frames were temporally averaged at the individual pixel level using Welford's online algorithm \cite{konnik2014high}. This averaging suppresses stochastic shot noise by a factor of $\sqrt{10}$, progressively revealing the underlying deterministic bias.
+\subsection{Experimental Setup and Hardware}
+All analytical routines were executed using Python, accelerated by NumPy and SciPy array libraries, on a computational workstation designed for robust matrix operations. We deploy the extracted AIM 2025 extreme low-light dataset \cite{yakovenko2025aim}, capturing stop-motion scenes at $\sim$1 lux. This controlled environment includes recordings from 14 individual smartphone camera modules traversing five physically unique scenes (coloured paper, hardware, toys, etc.). Crucially, all camera movements occur on a high-precision motorised rail to maintain exact pixel-level alignment, eliminating interpolation noise associated with standard software registration.
 
-    \item \textbf{Ground Truth Subtraction.} The resulting temporal mean still contains the actual optical scene content. To isolate the pure hardware contribution, the high-fidelity ground truth reference frame---a composite produced by the dataset authors from extended captures at the identical rail position---was subtracted from the temporal mean. The resulting residual matrix represents the deterministic offset injected by the sensor hardware.
+\subsection{Deterministic Bias Isolation Architecture}
 
-    \item \textbf{Analytical Characterisation.} The extracted FPN residual maps were subjected to four complementary analyses: (a) spatial heatmap visualisation to assess scene independence, (b) RMS magnitude quantification across sensors, (c) Power Spectral Density computation in both row and column directions to identify periodic readout signatures, and (d) cross-sensor Pearson correlation and Ward-linkage hierarchical clustering to reveal structural affinities.
-\end{enumerate}
+The systematic extraction protocol is modelled extensively in Figure~\ref{fig:architecture} and Algorithm~\ref{alg:fpn_extract}. For every unique sensor and scene pairing, a contiguous sequence of $N=10$ noisy frames is accumulated. Welford's online algorithm \cite{konnik2014high} evaluates the temporal mean progressively. This temporal averaging forces the standard deviation of shot noise downwards by a ratio of $\sqrt{N}$. The outcome serves as a stabilised projection $\bar{I}(x,y) \approx S(x,y) + F(x,y)$. Following the averaging stage, a high-fidelity ground truth reference frame $G(x,y)$ is subtracted from the temporal average $\bar{I}(x,y)$. The residual matrix inherently describes the isolated deterministic FPN mapping $F(x,y)$ injected structurally by the specific camera die array. 
+
+\begin{figure*}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    >=Stealth,
+    block/.style={rectangle, draw=black!80, thick, fill=blue!5, text width=3.8cm, align=center, rounded corners=3pt, minimum height=3em, font=\small},
+    data/.style={cylinder, draw=black!80, thick, fill=orange!10, text width=2.8cm, align=center, minimum height=3em, shape border rotate=90, font=\footnotesize},
+    layer_box/.style={rectangle, draw=black!50, dashed, fill=gray!5, inner sep=4mm, rounded corners=5pt},
+    arrow/.style={->, thick, draw=black!70},
+    thick_arrow/.style={->, line width=1.3pt, draw=blue!70}
+]
+    % Data Nodes
+    \node[data] (cam) {14 CMOS Modules \\ (1 lux ambient)};
+    \node[block, below=1cm of cam] (raw) {Ingest RAW Exposure Tensor $\mathbf{I}_t$};
+    \node[data, below=1cm of raw] (gt) {Ground Truth Optic Matrix $\mathbf{G}$};
+
+    % Processing Nodes
+    \node[block, right=2cm of cam] (welford) {Welford's Progression \\ $\mathbb{E}[\mathbf{I}]$ Accumulation};
+    \node[block, below=1cm of welford] (subtract) {Radiance Decoupling \\ $\bar{\mathbf{I}} - \mathbf{G}$};
+    \node[block, fill=green!15, below=1cm of subtract] (fpn) {Deterministic FPN Bias Matrix $\mathbf{F}(x,y)$};
+
+    % Analysis Nodes
+    \node[block, fill=red!10, right=2cm of welford] (psd) {Row/Col Power Spectral \\ Density (PSD)};
+    \node[block, fill=red!10, below=1cm of psd] (clust) {Hierarchical Ward Clustering (Euclidean)};
+    \node[block, fill=purple!10, below=1cm of clust] (rms) {Global RMS FPN Magnitude Severity};
+
+    % Fitting layers
+    \node[layer_box, fit=(cam)(raw)(gt)] (layer1) {};
+    \node[layer_box, fit=(welford)(subtract)(fpn)] (layer2) {};
+    \node[layer_box, fit=(psd)(clust)(rms)] (layer3) {};
+
+    % Layer labels
+    \node[above=2mm of layer1.north, font=\bfseries] {Stage 1: Acquisition Layer};
+    \node[above=2mm of layer2.north, font=\bfseries] {Stage 2: Stabilisation Layer};
+    \node[above=2mm of layer3.north, font=\bfseries] {Stage 3: Evaluation Suite};
+
+    % Connections
+    \draw[arrow] (cam) -- (raw);
+    \draw[thick_arrow] (raw.east) -- node[above, font=\scriptsize] {$\mathbf{I}_1 \dots \mathbf{I}_{10}$} (welford.west);
+    \draw[arrow] (welford) -- node[right, font=\footnotesize] {Mean $\bar{\mathbf{I}}$} (subtract);
+    \draw[arrow] (gt.east) -| node[pos=0.25, above, font=\scriptsize] {Reference} (subtract.south);
+    \draw[thick_arrow] (subtract) -- node[right, font=\footnotesize] {Isolation} (fpn);
+    
+    \draw[thick_arrow] (fpn.east) -- node[above, font=\scriptsize] {$\mathbf{F}$} ++(0.8,0) |- (psd.west);
+    \draw[thick_arrow] (fpn.east) -- ++(0.8,0) |- (clust.west);
+    \draw[thick_arrow] (fpn.east) -- ++(0.8,0) |- (rms.west);
+
+\end{tikzpicture}
+\caption{Comprehensive analytical architecture for deterministic FPN decoupling. The pipeline spans three fundamental stages: (1) stringent dataset ingestion targeting raw un-demosaicked matrices, (2) mathematical variance suppression and structural isolation via temporal mean projection, and (3) systematic downstream spatial and spectral testing configurations.}
+\label{fig:architecture}
+\end{figure*}
+
+\begin{algorithm}[tbh]
+\caption{Online FPN Tensor Decoupling Process}
+\label{alg:fpn_extract}
+\begin{algorithmic}[1]
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\REQUIRE Tensor of $N$ noisy RAW frames $\mathbf{I} \in \mathbb{R}^{N \times H \times W}$, Ground truth matrix $\mathbf{G} \in \mathbb{R}^{H \times W}$
+\ENSURE Deterministic FPN Bias Matrix $\mathbf{F} \in \mathbb{R}^{H \times W}$
+\STATE \textbf{Initialize:} Mean matrix $\mathbf{M}_1 \leftarrow \mathbf{I}_1$
+\FOR{$t = 2$ \TO $N$}
+    \STATE $\mathbf{\Delta} \leftarrow \mathbf{I}_t - \mathbf{M}_{t-1}$ \quad $\triangleright$ \textit{Compute temporal delta}
+    \STATE $\mathbf{M}_t \leftarrow \mathbf{M}_{t-1} + \frac{\mathbf{\Delta}}{t}$ \quad $\triangleright$ \textit{Update progressive mean}
+\ENDFOR
+\STATE $\bar{\mathbf{I}} \leftarrow \mathbf{M}_N$ \quad $\triangleright$ \textit{Stable signal frame}
+\STATE $\mathbf{F} \leftarrow \bar{\mathbf{I}} - \mathbf{G}$ \quad $\triangleright$ \textit{Decouple hardware bias from optical radiance}
+\RETURN $\mathbf{F}$ \quad $\triangleright$ \textit{Final fixed-pattern topography}
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Evaluation Metrics}
+To precisely compute the absolute penalty imposed by the Fixed-Pattern non-uniformities, we derive the robust Root Mean Square (RMS) magnitude calculated globally over the spatial domain $[1, W] \times [1, H]$ representing the array footprint of each individual module:
+\begin{equation}
+    RMS_{\text{FPN}} = \sqrt{\frac{1}{H \cdot W} \sum_{x=1}^{W} \sum_{y=1}^{H} \left( F(x,y) \right)^{2}}
+\end{equation}
+This baseline spatial evaluation anchors our spectral comparisons and prevents structural correlations from falsely masking gross magnitude discrepancies across distinct silicon nodes.
 
 All code and analysis scripts are publicly available.\footnote{\url{https://github.com/Keshav-poha/neural-archeology}}
 
@@ -213,19 +274,9 @@ The similarity matrix (Figure~\ref{fig:similarity}) provides complementary quant
 
 \subsection{Summary of Findings}
 
-The analyses presented above yield five principal empirical findings:
+The extensive physical evaluations presented previously yield several critical discoveries mapping operational noise properties directly to hardware architectures. The findings conclusively prove absolute scene independence: the spatial footprint of modern Fixed-Pattern Noise acts as a totally static mask, persisting identically within a single module across distinct optical content environments (Figure~\ref{fig:fpn_grid}). Simultaneously, global RMS severity analysis reveals extraordinary intra-device magnitude disparity, demonstrating that FPN variance can fluctuate by up to $22\times$ between separate lenses embedded strictly within the identical parent handset casing (Table~\ref{tab:fpn_summary}). 
 
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Scene independence:} FPN topographies are unambiguously scene-independent; identical spatial structures persist across five physically distinct scenes (Figure~\ref{fig:fpn_grid}).
-
-    \item \textbf{Intra-device magnitude disparity:} FPN severity varies by more than $20\times$ within a single handset (Table~\ref{tab:fpn_summary}), demonstrating that noise characteristics are properties of the individual sensor die, not the host device.
-
-    \item \textbf{Module-type dependence:} When grouped by optical role, ultrawide modules exhibit approximately twice the mean RMS FPN of wide modules (0.0190 vs.\ 0.0093), consistent with the larger die area and greater number of column-parallel readout channels in ultrawide sensors.
-
-    \item \textbf{Readout-driven periodicity:} Sharp harmonic spikes in row-wise PSD profiles consistently implicate periodic readout circuitry as the primary driver of deterministic banding (Figures~\ref{fig:psd} and~\ref{fig:col_psd}).
-
-    \item \textbf{Cross-brand structural affinities:} Hierarchical clustering and cross-sensor correlation reveal unexpected structural similarities across manufacturers and device generations, suggesting shared upstream silicon components (Figures~\ref{fig:dendrogram} and~\ref{fig:similarity}).
-\end{enumerate}
+Furthermore, noise severity correlates unequivocally with specific structural properties such as module-type dependence. On average, sophisticated ultrawide camera arrays consistently harbor double the FPN magnitude intrinsically present in standard wide lenses. Such pronounced bias stems directly from larger die topographies requiring dense parallel analog chains. In exploring readout-driven periodicity, sharp harmonic resonance spikes were continuously detected in row-centric power spectral density maps, indicating that serial row-readout operational amplifiers constitute the primary culprit for observed vertical banding artifacts (Figures~\ref{fig:psd} and~\ref{fig:col_psd}). These hardware realities organically cultivate cross-brand structural affinities. Detailed Euclidean clustering successfully identified stark, measurable topological similarities matching flagship hardware modules spanning competing commercial OEMs, robustly corroborating the thesis that divergent brands continually provision upstream core sensing components from shared, unified silicon suppliers (Figures~\ref{fig:dendrogram} and~\ref{fig:similarity}).
 
 \section{Discussion and Limitations}
 

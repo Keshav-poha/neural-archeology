@@ -166,12 +166,12 @@ def render_panel(
     if data is None:
         ax.set_facecolor("0.15")
         ax.text(0.5, 0.5, "N/A", ha="center", va="center",
-                transform=ax.transAxes, color="white", fontsize=6)
+                transform=ax.transAxes, color="white", fontsize=13)
     else:
         ax.imshow(data, cmap="bwr", vmin=vmin, vmax=vmax,
                   interpolation="nearest", aspect="auto")
     if title:
-        ax.set_title(title, fontsize=6, pad=2)
+        ax.set_title(title, fontsize=13, pad=2)
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -206,11 +206,11 @@ def build_overview_grid(
     fig.suptitle(
         "FPN residuals (bias_map − gt)  |  bwr: blue=negative offset, red=positive offset\n"
         "Colour scale = ±3×RMS of the per-sensor cross-scene mean",
-        fontsize=7, y=1.01,
+        fontsize=14, y=1.01,
     )
 
     for col_idx, label in enumerate(col_labels):
-        axes[0, col_idx].set_title(label, fontsize=7, pad=3,
+        axes[0, col_idx].set_title(label, fontsize=14, pad=3,
                                    fontweight="bold" if label == "MEAN" else "normal")
 
     for row_idx, sensor_id in enumerate(sensors):
@@ -251,7 +251,7 @@ def build_overview_grid(
 
         # Render row label on the first column
         axes[row_idx, 0].set_ylabel(
-            f"S{sensor_id:02d}\n{sensor_label}", fontsize=6, rotation=0,
+            f"S{sensor_id:02d}\n{sensor_label}", fontsize=13, rotation=0,
             labelpad=36, va="center",
         )
 
@@ -295,10 +295,10 @@ def build_snr_grid(
         "Cross-scene Mean vs Std of FPN residual\n"
         "Left=Mean (persistent signal), Right=Std (variability/noise)\n"
         "Low std + non-zero mean = stable FPN fingerprint",
-        fontsize=7, y=1.01,
+        fontsize=14, y=1.01,
     )
-    axes[0, 0].set_title("Mean", fontsize=7, fontweight="bold")
-    axes[0, 1].set_title("Std", fontsize=7)
+    axes[0, 0].set_title("Mean", fontsize=14, fontweight="bold")
+    axes[0, 1].set_title("Std", fontsize=14)
 
     for row_idx, sensor_id in enumerate(sensors):
         available = []
@@ -323,7 +323,7 @@ def build_snr_grid(
         ds_std  = prepare(std_map,  downsample, 0)           # no blur on std
 
         axes[row_idx, 0].set_ylabel(
-            f"S{sensor_id:02d}\n{SENSOR_NAMES.get(sensor_id, '')}", fontsize=5,
+            f"S{sensor_id:02d}\n{SENSOR_NAMES.get(sensor_id, '')}", fontsize=12,
             rotation=0, labelpad=36, va="center",
         )
 
@@ -389,7 +389,7 @@ def build_sensor_strips(
             f"Sensor {sensor_id:02d}  ({sensor_label})  —  FPN residual  "
             f"|  colour scale ±{clip_sigma:.0f}×RMS = ±{vabs:.5f}  "
             f"|  display smooth σ={smooth_sigma}",
-            fontsize=8,
+            fontsize=15,
         )
 
         for ax, panel, label in zip(axes, panels, col_labels):
@@ -453,7 +453,7 @@ def build_sensor_means(
         ax1.set_title(
             f"S{sensor_id:02d} {sensor_label}  —  cross-scene mean FPN\n"
             f"RMS={rms:.5f}   clip=±{vabs:.5f}   smooth σ={smooth_sigma * 1.5:.1f}",
-            fontsize=8,
+            fontsize=15,
         )
         ax1.set_xticks([]); ax1.set_yticks([])
         plt.colorbar(im, ax=ax1, fraction=0.03, pad=0.02)
@@ -465,7 +465,7 @@ def build_sensor_means(
             ax = axes_all[idx]
             ax.imshow(ds, cmap="bwr", vmin=-vabs, vmax=vabs,
                       interpolation="nearest", aspect="auto")
-            ax.set_title(f"S{sensor_id:02d} {sensor_label}", fontsize=6)
+            ax.set_title(f"S{sensor_id:02d} {sensor_label}", fontsize=13)
             ax.set_xticks([]); ax.set_yticks([])
 
     # Hide any unused mosaic cells
@@ -475,7 +475,7 @@ def build_sensor_means(
     fig_all.suptitle(
         "Cross-scene mean FPN residual — all 14 sensors\n"
         "Each panel uses its own ±3×RMS colour scale",
-        fontsize=9,
+        fontsize=16,
     )
     plt.tight_layout()
     savefig(fig_all, output_dir / "all_sensors_mean.png")
@@ -527,7 +527,7 @@ def build_profile_plots(
         fig.suptitle(
             f"S{sensor_id:02d} {sensor_label}  —  Row & Column FPN profiles  "
             "(overlaid across scenes)",
-            fontsize=9,
+            fontsize=16,
         )
 
         for i, (prof, label) in enumerate(zip(row_profiles, scene_hit)):
@@ -535,7 +535,7 @@ def build_profile_plots(
         ax_r.plot(mean_row, lw=1.5, color="black", label="mean", zorder=5)
         ax_r.axhline(0, color="grey", lw=0.5, ls="--")
         ax_r.set_ylabel("Row FPN (mean across cols)")
-        ax_r.legend(fontsize=6, ncol=6, loc="upper right")
+        ax_r.legend(fontsize=13, ncol=6, loc="upper right")
         ax_r.set_xlim(0, len(mean_row) - 1)
 
         for i, (prof, label) in enumerate(zip(col_profiles, scene_hit)):

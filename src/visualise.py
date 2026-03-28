@@ -145,7 +145,7 @@ def plot_bias_heatmaps(
             ax.set_title(
                 f"Bias map — {scene} / sensor_{sensor_id}\n"
                 f"σ = {sigma:.5f}  |  range [{bias_map.min():.4f}, {bias_map.max():.4f}]",
-                fontsize=10,
+                fontsize=17,
             )
             ax.axis("off")
             savefig(fig, heatmap_dir / f"{scene}_sensor_{sensor_id}.png")
@@ -179,13 +179,13 @@ def plot_scene_independence(
     for idx, sensor_id in enumerate(sensor_ids):
         corr = correlations[idx]
         im = axes[idx].imshow(corr, cmap=CMAP_CORR, vmin=-1, vmax=1)
-        axes[idx].set_title(f"S{sensor_id:02d}", fontsize=9)
+        axes[idx].set_title(f"S{sensor_id:02d}", fontsize=16)
         axes[idx].set_xticks(range(len(scenes)))
         axes[idx].set_yticks(range(len(scenes)))
-        axes[idx].set_xticklabels(scene_labels, rotation=45, ha="right", fontsize=6)
-        axes[idx].set_yticklabels(scene_labels, fontsize=6)
+        axes[idx].set_xticklabels(scene_labels, rotation=45, ha="right", fontsize=13)
+        axes[idx].set_yticklabels(scene_labels, fontsize=13)
 
-    fig.suptitle("Cross-Scene Pearson r of Bias Maps (per Sensor)", fontsize=13, y=1.01)
+    fig.suptitle("Cross-Scene Pearson r of Bias Maps (per Sensor)", fontsize=20, y=1.01)
     fig.colorbar(
         plt.cm.ScalarMappable(norm=mcolors.Normalize(vmin=-1, vmax=1), cmap=CMAP_CORR),
         ax=axes[:n],
@@ -215,7 +215,7 @@ def plot_sensor_similarity(analysis_dir: Path, out_dir: Path) -> None:
     ax.set_yticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=45, ha="right")
     ax.set_yticklabels(labels)
-    ax.set_title("Cross-Sensor Bias Similarity (scene-averaged Pearson r)", fontsize=12)
+    ax.set_title("Cross-Sensor Bias Similarity (scene-averaged Pearson r)", fontsize=19)
 
     # Annotate cells
     for i in range(len(sensor_ids)):
@@ -224,7 +224,7 @@ def plot_sensor_similarity(analysis_dir: Path, out_dir: Path) -> None:
             if not np.isnan(val):
                 ax.text(
                     j, i, f"{val:.2f}",
-                    ha="center", va="center", fontsize=6,
+                    ha="center", va="center", fontsize=13,
                     color="black" if abs(val) < 0.6 else "white",
                 )
 
@@ -245,7 +245,7 @@ def plot_dendrogram(analysis_dir: Path, out_dir: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(8, 7))
     dendrogram(Z, labels=labels, ax=ax, leaf_rotation=45, leaf_font_size=9)
-    ax.set_title("Hierarchical Clustering of Sensors by Bias Fingerprint (Ward linkage)", fontsize=12)
+    ax.set_title("Hierarchical Clustering of Sensors by Bias Fingerprint (Ward linkage)", fontsize=19)
     ax.set_ylabel("Euclidean distance")
     savefig(fig, out_dir / "sensor_dendrogram.png")
 
@@ -276,12 +276,12 @@ def plot_psd(analysis_dir: Path, out_dir: Path) -> None:
             ax.semilogy(freqs, psds[idx], color=cmap(idx),
                         linestyle=line_styles[idx], linewidth=0.9,
                         label=sensor_label(sensor_id))
-        ax.set_xlabel("Normalised frequency (cycles/sample)", fontsize=10)
-        ax.set_ylabel("Power spectral density (log scale)", fontsize=10)
-        ax.set_title(f"{direction}-direction PSD of Bias Maps \u2014 All Sensors", fontsize=11)
+        ax.set_xlabel("Normalised frequency (cycles/sample)", fontsize=17)
+        ax.set_ylabel("Power spectral density (log scale)", fontsize=17)
+        ax.set_title(f"{direction}-direction PSD of Bias Maps \u2014 All Sensors", fontsize=18)
         ax.legend(
             ncol=3,
-            fontsize=7,
+            fontsize=14,
             loc="upper right",
             framealpha=0.85,
             edgecolor="#cccccc",
@@ -311,9 +311,9 @@ def plot_fpn_summary(analysis_dir: Path, out_dir: Path) -> None:
     bars = ax.bar(x, mean_rms, yerr=std_rms, capsize=3, color="#2c5f8a",
                   edgecolor="#1a3a54", linewidth=0.6, error_kw={"elinewidth": 1.0, "capthick": 0.8})
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
-    ax.set_ylabel("RMS FPN  (pixel_mean \u2212 gt)", fontsize=10)
-    ax.set_title("Mean RMS Fixed-Pattern Noise per Sensor\n(error bars = std across scenes)", fontsize=11)
+    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=15)
+    ax.set_ylabel("RMS FPN  (pixel_mean \u2212 gt)", fontsize=17)
+    ax.set_title("Mean RMS Fixed-Pattern Noise per Sensor\n(error bars = std across scenes)", fontsize=18)
     ax.yaxis.grid(True, alpha=0.3, linewidth=0.5)
     ax.set_axisbelow(True)
     ax.tick_params(axis="y", labelsize=9)
@@ -324,7 +324,7 @@ def plot_fpn_summary(analysis_dir: Path, out_dir: Path) -> None:
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + std_rms[0] * 0.1,
             f"{val:.4f}",
-            ha="center", va="bottom", fontsize=7,
+            ha="center", va="bottom", fontsize=14,
         )
 
     savefig(fig, out_dir / "fpn_summary.png")
@@ -370,10 +370,10 @@ def plot_temporal_stability(
     ax.bar(x + w / 2, extra_vars, width=w, label="Extra-noisy frames", color="#c75146",
            edgecolor="#8c2e25", linewidth=0.6)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
-    ax.set_ylabel("Mean pixel-wise temporal variance", fontsize=10)
-    ax.set_title("Temporal Variance: Noisy vs Extra-Noisy Frames\n(scene-averaged)", fontsize=11)
-    ax.legend(fontsize=9, edgecolor="#cccccc", framealpha=0.9)
+    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=15)
+    ax.set_ylabel("Mean pixel-wise temporal variance", fontsize=17)
+    ax.set_title("Temporal Variance: Noisy vs Extra-Noisy Frames\n(scene-averaged)", fontsize=18)
+    ax.legend(fontsize=16, edgecolor="#cccccc", framealpha=0.9)
     ax.yaxis.grid(True, alpha=0.3, linewidth=0.5)
     ax.set_axisbelow(True)
     ax.tick_params(labelsize=9)
